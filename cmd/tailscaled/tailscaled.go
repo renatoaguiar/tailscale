@@ -30,6 +30,7 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/unix"
 	"tailscale.com/client/local"
 	"tailscale.com/cmd/tailscaled/childproc"
 	"tailscale.com/control/controlclient"
@@ -372,6 +373,48 @@ var logPol *logpolicy.Policy
 var debugMux *http.ServeMux
 
 func run() (err error) {
+	err = unix.Unveil(filepath.Dir(args.statepath), "rwc")
+	if err != nil {
+		panic("unveil")
+	}
+	err = unix.Unveil(filepath.Dir(args.socketpath), "rwc")
+	if err != nil {
+		panic("unveil")
+	}
+	err = unix.Unveil("/dev/tun0", "rw")
+	if err != nil {
+		panic("unveil")
+	}
+	err = unix.Unveil("/dev/null", "rw")
+	if err != nil {
+		panic("unveil")
+	}
+	err = unix.Unveil("/sbin/ifconfig", "rx")
+	if err != nil {
+		panic("unveil")
+	}
+	err = unix.Unveil("/sbin/route", "rx")
+	if err != nil {
+		panic("unveil")
+	}
+	err = unix.Unveil("/etc/resolv.conf", "rwc")
+	if err != nil {
+		panic("unveil")
+	}
+	err = unix.Unveil("/etc/resolv.pre-tailscale-backup.conf", "rwc")
+	if err != nil {
+		panic("unveil")
+	}
+	err = unix.UnveilBlock()
+	if err != nil {
+		panic("unveil")
+	}
+
+	// err = unix.PledgePromises("stdio dns inet rpath wpath cpath unix proc exec tty fattr")
+	// if err != nil {
+	// 	panic("pledge")
+	// }
+
 	var logf logger.Logf = log.Printf
 
 	// Install an event bus as early as possible, so that it's
